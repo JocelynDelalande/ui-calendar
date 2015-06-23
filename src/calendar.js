@@ -244,6 +244,7 @@ angular.module('ui.calendar', [])
 
         scope.destroy = function(){
           if(calendar && calendar.fullCalendar){
+            scope.lastView = calendar.fullCalendar('getView');
             calendar.fullCalendar('destroy');
           }
           if(attrs.calendar) {
@@ -257,7 +258,12 @@ angular.module('ui.calendar', [])
           calendar.fullCalendar(options);
           if(attrs.calendar) {
             uiCalendarConfig.calendars[attrs.calendar] = calendar;
-          }          
+          }
+          if(scope.lastView) {
+            calendar.fullCalendar('changeView', scope.lastView.name);
+            calendar.fullCalendar('gotoDate', scope.lastView.start);
+            scope.lastView = undefined;
+          }
         };
 
         eventSourcesWatcher.onAdded = function(source) {
