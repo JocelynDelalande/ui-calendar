@@ -318,7 +318,7 @@ angular.module('ui.calendar', [])
                     if (newO.defaultView === oldO.defaultView) {
                         changeView = lastView.name;
                     }
-                    gotoDate = lastView.ntervalStart;
+                    gotoDate = lastView.intervalStart;
                 }
             }
             scope.init(changeView, gotoDate);
