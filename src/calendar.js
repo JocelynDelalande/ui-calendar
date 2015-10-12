@@ -244,7 +244,6 @@ angular.module('ui.calendar', [])
 
         scope.destroy = function(){
           if(calendar && calendar.fullCalendar){
-            scope.lastView = calendar.fullCalendar('getView');
             calendar.fullCalendar('destroy');
           }
           if(attrs.calendar) {
@@ -254,15 +253,16 @@ angular.module('ui.calendar', [])
           }
         };
 
-        scope.init = function(){
+        scope.init = function(changeView, gotoDate){
           calendar.fullCalendar(options);
           if(attrs.calendar) {
             uiCalendarConfig.calendars[attrs.calendar] = calendar;
           }
-          if(scope.lastView) {
-            calendar.fullCalendar('changeView', scope.lastView.name);
-            calendar.fullCalendar('gotoDate', scope.lastView.start);
-            scope.lastView = undefined;
+          if(changeView) {
+            calendar.fullCalendar('changeView', changeView);
+          }
+          if (gotoDate) {
+            calendar.fullCalendar('gotoDate', gotoDate);
           }
         };
 
@@ -309,7 +309,19 @@ angular.module('ui.calendar', [])
 
         scope.$watch(getOptions, function(newO,oldO){
             scope.destroy();
-            scope.init();
+
+            //if settings has not changeView, then keep the current one;
+            var changeView, gotoDate;
+            if (calendar && calendar.fullCalendar) {
+                var lastView = calendar.fullCalendar('getView');
+                if (lastView) {
+                    if (newO.defaultView === oldO.defaultView) {
+                        changeView = lastView.name;
+                    }
+                    gotoDate = lastView.ntervalStart;
+                }
+            }
+            scope.init(changeView, gotoDate);
         });
       }
     };
