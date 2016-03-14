@@ -106,7 +106,7 @@ If you need to automatically re-render other event data, you can use `calendar-w
        returns "" + event.price;
     }
 
-    <ui-calendar calendar-watch-event="extraEventSignature" ... >
+    <ui-calendar calendar-watch-event="extraEventSignature(event)" ... >
     // will now watch for price
 
 ### Adding new events issue
@@ -132,6 +132,11 @@ in a service, instead of letting fullCalendar pull them via AJAX), you can add t
 # Minify
 
     grunt minify
+
+# Local Server to test demo
+
+    grunt serve
+
 
 ## Documentation for the Calendar
 

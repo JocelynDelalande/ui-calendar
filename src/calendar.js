@@ -40,9 +40,14 @@ angular.module('ui.calendar', [])
         if (!e._id) {
           e._id = eventSerialId++;
         }
+        
+        var extraSignature = extraEventSignature({event: e}) || '';
+        var start = moment.isMoment(e.start) ? e.start.unix() : (e.start ? moment(e.start).unix() : '');
+        var end =   moment.isMoment(e.end)   ? e.end.unix()   : (e.end   ? moment(e.end).unix()   : '');
+        
         // This extracts all the information we need from the event. http://jsperf.com/angular-calendar-events-fingerprint/3
-        return "" + e._id + (e.id || '') + (e.title || '') + (e.url || '') + (+e.start || '') + (+e.end || '') +
-          (e.allDay || '') + (e.className || '') + extraEventSignature(e) || '';
+        return "" + e._id + (e.id || '') + (e.title || '') + (e.url || '') + start + end +
+          (e.allDay || '') + (e.className || '') + extraSignature;
       };
 
       var sourceSerialId = 1, sourceEventsSerialId = 1;
@@ -242,7 +247,7 @@ angular.module('ui.calendar', [])
           return JSON.stringify(options2);
         }
 
-        scope.destroy = function(){
+        scope.destroyCalendar = function(){
           if(calendar && calendar.fullCalendar){
             calendar.fullCalendar('destroy');
           }
@@ -253,7 +258,10 @@ angular.module('ui.calendar', [])
           }
         };
 
-        scope.init = function(changeView, gotoDate){
+        scope.initCalendar = function(changeView, gotoDate){
+          if (!calendar) {
+            calendar = angular.element(elm).html('');
+          }
           calendar.fullCalendar(options);
           if(attrs.calendar) {
             uiCalendarConfig.calendars[attrs.calendar] = calendar;
@@ -265,36 +273,56 @@ angular.module('ui.calendar', [])
             calendar.fullCalendar('gotoDate', gotoDate);
           }
         };
+        scope.$on('$destroy', function() {
+          scope.destroyCalendar();
+        });
 
         eventSourcesWatcher.onAdded = function(source) {
-          calendar.fullCalendar('addEventSource', source);
-          sourcesChanged = true;
+          if (calendar && calendar.fullCalendar) {
+            calendar.fullCalendar(options);
+            if (attrs.calendar) {
+                uiCalendarConfig.calendars[attrs.calendar] = calendar;
+            }
+            calendar.fullCalendar('addEventSource', source);
+            sourcesChanged = true;
+          }
         };
 
         eventSourcesWatcher.onRemoved = function(source) {
-          calendar.fullCalendar('removeEventSource', source);
-          sourcesChanged = true;
+          if (calendar && calendar.fullCalendar) {
+            calendar.fullCalendar('removeEventSource', source);
+            sourcesChanged = true;
+          }
         };
 
-        eventSourcesWatcher.onChanged = function(source) {
-          calendar.fullCalendar('refetchEvents');
-          sourcesChanged = true;
+        eventSourcesWatcher.onChanged = function() {
+          if (calendar && calendar.fullCalendar) {
+            calendar.fullCalendar('refetchEvents');
+            sourcesChanged = true;
+          }
+
         };
 
         eventsWatcher.onAdded = function(event) {
-          calendar.fullCalendar('renderEvent', event, (event.stick ? true : false));
+          if (calendar && calendar.fullCalendar) {
+            calendar.fullCalendar('renderEvent', event, (event.stick ? true : false));
+          }
         };
 
         eventsWatcher.onRemoved = function(event) {
-          calendar.fullCalendar('removeEvents', event._id);
+          if (calendar && calendar.fullCalendar) {
+            calendar.fullCalendar('removeEvents', event._id);
+          }
         };
 
         eventsWatcher.onChanged = function(event) {
-          var clientEvents = calendar.fullCalendar('clientEvents', event._id);
-          for (var i = 0; i < clientEvents.length; i++) {
-            var clientEvent = clientEvents[i];
-            clientEvent = angular.extend(clientEvent, event);
-            calendar.fullCalendar('updateEvent', clientEvent);
+          if (calendar && calendar.fullCalendar) {
+            var clientEvents = calendar.fullCalendar('clientEvents', event._id);
+            for (var i = 0; i < clientEvents.length; i++) {
+              var clientEvent = clientEvents[i];
+              clientEvent = angular.extend(clientEvent, event);
+              calendar.fullCalendar('updateEvent', clientEvent);
+            }
           }
         };
 
@@ -307,21 +335,27 @@ angular.module('ui.calendar', [])
           }
         });
 
-        scope.$watch(getOptions, function(newO,oldO){
-            scope.destroy();
-
-            //if settings has not changeView, then keep the current one;
-            var changeView, gotoDate;
-            if (calendar && calendar.fullCalendar) {
-                var lastView = calendar.fullCalendar('getView');
-                if (lastView) {
-                    if (newO.defaultView === oldO.defaultView) {
-                        changeView = lastView.name;
-                    }
-                    gotoDate = lastView.intervalStart;
-                }
-            }
-            scope.init(changeView, gotoDate);
+        scope.$watch(getOptions, function(newValue, oldValue) {
+		function _initCalendar() {
+			//if settings has not changeView, then keep the current one;
+            		var changeView, gotoDate;
+            		if (calendar && calendar.fullCalendar) {
+                		var lastView = calendar.fullCalendar('getView');
+               	 		if (lastView) {
+                    			if (newValue.defaultView === oldValue.defaultView) {
+                        			changeView = lastView.name;
+                    			}
+		                    	gotoDate = lastView.intervalStart;
+                		}
+        	    }
+	            scope.initCalendar(changeView, gotoDate);
+		}
+                if(newValue !== oldValue) {
+            		scope.destroyCalendar();
+            		_initCalendar();
+          	} else if((newValue && angular.isUndefined(calendar))) {
+            		_initCalendar();
+          	}
         });
       }
     };
